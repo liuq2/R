@@ -1,0 +1,99 @@
+---
+title: "test"
+author: "Q"
+date: "May 15, 2019"
+output: html_document
+---
+
+```{ setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## load libraries, some need install package function in R before loading
+
+
+```{r}
+library(gsheet)
+#https://github.com/maxconway/gsheet
+library(googledrive)
+library(ggplot2)
+library(ggpubr)
+library(reshape2)
+library(tidyr)
+library(dplyr)
+library(Hmisc)
+```
+
+## define functions
+
+```{r}
+
+## define function to retrieve mean and standard error
+
+data_summary <- function(x) {
+  m <- mean(x)
+  ymin <- m-sd(x, na.rm=TRUE)/sqrt(length(x[!is.na(x)])) 
+  ymax <- m+sd(x, na.rm=TRUE)/sqrt(length(x[!is.na(x)])) 
+  return(c(y=m,ymin=ymin,ymax=ymax))
+}
+
+## define function to control Y axis range for each panel
+YaxisControl <- function(df, n){
+  Yaxisrange<-summarize(df$value,df$variable,max)
+  dummy<-Yaxisrange[rep(seq_len(nrow(Yaxisrange)), each=n),]
+  multiplier<-rep(c(0.5,1.1), times = n)
+  names(dummy) <- c("variable", "value")
+  dummy$value<-dummy$value*multiplier
+  dummy$genotype<-NA
+  geom_blank(data=dummy, aes(genotype, value))
+}
+
+## define function to convert short column name to more detailed title
+
+ColumnNames2Title <- function(columnName, columnTitle){
+  
+  if (length(columnName) == length(columnTitle)){
+  
+  return (setNames(columnTitle, columnName))
+    }
+}
+
+```
+## load data and prepare for plotting
+
+```{r}
+#graphics.off()
+
+## load data from google drive spread sheet, subset and reformat
+url <- drive_get("~/pasta/LongShortPasta.xlsx")
+
+my_data=gsheet2tbl(sprintf("'https://drive.google.com/file/d/%s", url$id))
+my_data<-subset(my_data, !is.na(videoID))
+my_data<-subset(my_data, select=c(4,5,7))
+my_data$genotype<-tolower(my_data$genotype)
+my_data$genotype <- as.factor(my_data$genotype)
+
+## rename column name to detailed title
+columnName=names(my_data)[1:2]
+columnTitle <- c('consumption time long piece (s)', 'consumption time short piece (s)')
+
+cat(sprintf("%s has been renamed to: %s\n", columnName, columnTitle))
+
+## reformat data for plotting
+df<-melt(my_data, id.vars = "genotype", measure.vars = columnName)
+```
+## plotting
+
+```{r}
+p2<-ggplot(df, aes(x=genotype, y=value, fill=genotype)) + 
+  facet_wrap(.~ variable, scales="free", strip.position="top", labeller=as_labeller(ColumnNames2Title(columnName, columnTitle)))+
+  YaxisControl(df,length(columnName)) +
+  geom_dotplot(binaxis='y', stackdir='center', stackratio=1.1, dotsize=0.7)+
+  stat_summary(fun.data=data_summary,geom="errorbar", color="#0066cc",width=0.13)+
+  stat_summary(fun.y=mean, geom="point", fill="#0000ff", size = 2)+
+  scale_fill_manual(values = c("#ff3300", "#999999")) 
+
+p2 + labs(title="Comparison of CYFIP1 KO and WT",x ="", y = "")+
+  theme(text = element_text(size=14)) +
+  stat_compare_means(label = "p.format",method = "wilcox.test",label.x = 1.35)
+```
