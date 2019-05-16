@@ -1,17 +1,8 @@
 ---
-title: "test"
 author: "Q"
 date: "May 15, 2019"
-output: html_document
 ---
-
-```{ setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 ## load libraries, some need install package function in R before loading
-
-
 ```{r}
 library(gsheet)
 #https://github.com/maxconway/gsheet
@@ -23,11 +14,8 @@ library(tidyr)
 library(dplyr)
 library(Hmisc)
 ```
-
 ## define functions
-
 ```{r}
-
 ## define function to retrieve mean and standard error
 
 data_summary <- function(x) {
@@ -57,10 +45,8 @@ ColumnNames2Title <- function(columnName, columnTitle){
   return (setNames(columnTitle, columnName))
     }
 }
-
 ```
 ## load data and prepare for plotting
-
 ```{r}
 #graphics.off()
 
@@ -83,7 +69,6 @@ cat(sprintf("%s has been renamed to: %s\n", columnName, columnTitle))
 df<-melt(my_data, id.vars = "genotype", measure.vars = columnName)
 ```
 ## plotting
-
 ```{r}
 p2<-ggplot(df, aes(x=genotype, y=value, fill=genotype)) + 
   facet_wrap(.~ variable, scales="free", strip.position="top", labeller=as_labeller(ColumnNames2Title(columnName, columnTitle)))+
